@@ -47,34 +47,20 @@ cd "$INSTALL_DIR" || error "Failed to change to directory: $INSTALL_DIR"
 # Clean up any previous installation
 rm -f v3p.zip 2>/dev/null || true
 rm -f v3p_launcher 2>/dev/null || true
+rm -f o11.cfg 2>/dev/null || true
 
 step "Downloading v3p package..."
-wget --progress=bar:force --timeout=30 --tries=3 "$DOWNLOAD_URL" -O v3p.zip
+wget -q "$DOWNLOAD_URL" -O v3p.zip
 if [ ! -f v3p.zip ]; then error "Failed to download v3p.zip"; fi
 
 step "Extracting package..."
-unzip -o v3p.zip
+# Use -o to overwrite files without prompting
+unzip -o -q v3p.zip
 rm -f v3p.zip
 
-step "Checking extracted files..."
-ls -la "$INSTALL_DIR/"
-
-# Look for the v3p_launcher file in different possible locations
-V3P_LAUNCHER=""
-if [ -f "v3p_launcher" ]; then
-    V3P_LAUNCHER="v3p_launcher"
-elif [ -f "v3p" ]; then
-    V3P_LAUNCHER="v3p"
-elif [ -f "launcher" ]; then
-    V3P_LAUNCHER="launcher"
-else
-    error "No executable file found after extraction. Check the zip file content."
-fi
-
-step "Found executable: $V3P_LAUNCHER"
-
 step "Setting executable permissions..."
-chmod +x "$V3P_LAUNCHER"
+if [ ! -f "v3p_launcher" ]; then error "v3p_launcher not found after extraction"; fi
+chmod +x v3p_launcher
 chmod -R 755 "$INSTALL_DIR"
 
 step "Creating systemd service..."
@@ -82,31 +68,22 @@ cat > /etc/systemd/system/$SERVICE_NAME << EOF
 [Unit]
 Description=o11 Service
 After=network.target
-Wants=network.target
 
 [Service]
 Type=simple
 User=root
 Group=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/$V3P_LAUNCHER -p $SERVICE_PORT -noramfs
-ExecStop=/bin/kill -TERM \$MAINPID
+ExecStart=$INSTALL_DIR/v3p_launcher -p $SERVICE_PORT -noramfs
+KillMode=control-group
 Restart=on-failure
-RestartSec=5
-TimeoutStopSec=30
+RestartSec=3
+TasksMax=infinity
 LimitNOFILE=infinity
 LimitNPROC=infinity
-StandardOutput=journal
-StandardError=journal
-
-# Security
-NoNewPrivileges=yes
-PrivateTmp=yes
-ProtectSystem=strict
-ProtectHome=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target graphical.target
 EOF
 
 step "Reloading systemd and enabling service..."
@@ -146,7 +123,6 @@ echo "IP Address: $IP_ADDRESS"
 echo "Service Port: $SERVICE_PORT"
 echo "Installation Directory: $INSTALL_DIR"
 echo "Service Name: $SERVICE_NAME"
-echo "Executable: $V3P_LAUNCHER"
 echo ""
 echo "Access URL: http://$IP_ADDRESS:$SERVICE_PORT"
 echo ""
