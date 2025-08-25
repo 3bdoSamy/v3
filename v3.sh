@@ -44,17 +44,37 @@ step "Creating installation directory..."
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR" || error "Failed to change to directory: $INSTALL_DIR"
 
+# Clean up any previous installation
+rm -f v3p.zip 2>/dev/null || true
+rm -f v3p_launcher 2>/dev/null || true
+
 step "Downloading v3p package..."
-wget -q "$DOWNLOAD_URL" -O v3p.zip
+wget --progress=bar:force --timeout=30 --tries=3 "$DOWNLOAD_URL" -O v3p.zip
 if [ ! -f v3p.zip ]; then error "Failed to download v3p.zip"; fi
 
 step "Extracting package..."
-unzip -q v3p.zip
+unzip -o v3p.zip
 rm -f v3p.zip
 
+step "Checking extracted files..."
+ls -la "$INSTALL_DIR/"
+
+# Look for the v3p_launcher file in different possible locations
+V3P_LAUNCHER=""
+if [ -f "v3p_launcher" ]; then
+    V3P_LAUNCHER="v3p_launcher"
+elif [ -f "v3p" ]; then
+    V3P_LAUNCHER="v3p"
+elif [ -f "launcher" ]; then
+    V3P_LAUNCHER="launcher"
+else
+    error "No executable file found after extraction. Check the zip file content."
+fi
+
+step "Found executable: $V3P_LAUNCHER"
+
 step "Setting executable permissions..."
-if [ ! -f "v3p_launcher" ]; then error "v3p_launcher not found after extraction"; fi
-chmod +x v3p_launcher
+chmod +x "$V3P_LAUNCHER"
 chmod -R 755 "$INSTALL_DIR"
 
 step "Creating systemd service..."
@@ -69,7 +89,7 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$INSTALL_DIR/v3p_launcher -p $SERVICE_PORT -noramfs
+ExecStart=$INSTALL_DIR/$V3P_LAUNCHER -p $SERVICE_PORT -noramfs
 ExecStop=/bin/kill -TERM \$MAINPID
 Restart=on-failure
 RestartSec=5
@@ -126,6 +146,7 @@ echo "IP Address: $IP_ADDRESS"
 echo "Service Port: $SERVICE_PORT"
 echo "Installation Directory: $INSTALL_DIR"
 echo "Service Name: $SERVICE_NAME"
+echo "Executable: $V3P_LAUNCHER"
 echo ""
 echo "Access URL: http://$IP_ADDRESS:$SERVICE_PORT"
 echo ""
