@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# o11-v3 Professional Installer with Port Selection
+# o11-v3 Professional Installer
 # Script by: 3BdALLaH
 
 set -e
@@ -34,11 +34,12 @@ INSTALL_DIR="/home/o11"
 SERVICE_NAME="o11.service"
 DOWNLOAD_URL="https://senator.pages.dev/v3p.zip"
 
-# Port selection
-step "Port Configuration"
-echo "Enter port number or press Enter for default (2086):"
-read -p "Service port [$DEFAULT_PORT]: " SERVICE_PORT
-SERVICE_PORT=${SERVICE_PORT:-$DEFAULT_PORT}
+# Get port from command line or use default
+if [ $# -eq 1 ]; then
+    SERVICE_PORT=$1
+else
+    SERVICE_PORT="$DEFAULT_PORT"
+fi
 
 # Validate port
 if ! [[ "$SERVICE_PORT" =~ ^[0-9]+$ ]] || [ "$SERVICE_PORT" -lt 1 ] || [ "$SERVICE_PORT" -gt 65535 ]; then
@@ -136,8 +137,12 @@ echo "Service Name: $SERVICE_NAME"
 echo ""
 echo "Access URL: http://$IP_ADDRESS:$SERVICE_PORT"
 echo ""
-echo "Note: v3 is a different service type than v4 and does not have"
-echo "a web admin panel with username/password authentication."
+echo "Default Credentials (if applicable):"
+echo "Username: admin"
+echo "Password: admin"
+echo ""
+echo "Note: v3 is a different service type than v4. The admin credentials"
+echo "may not be used depending on your specific v3 configuration."
 echo ""
 echo "Useful Commands:"
 echo "Check status:    systemctl status $SERVICE_NAME"
