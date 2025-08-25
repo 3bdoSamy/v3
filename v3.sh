@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# o11-v3 Professional Installer
+# o11-v3 Professional Installer with Port Selection
 # Script by: 3BdALLaH
 
 set -e
@@ -29,12 +29,23 @@ echo "================================================"
 echo -e "${NC}"
 
 # Configuration
-SERVICE_PORT="2086"
+DEFAULT_PORT="2086"
 INSTALL_DIR="/home/o11"
 SERVICE_NAME="o11.service"
 DOWNLOAD_URL="https://senator.pages.dev/v3p.zip"
 
-step "Using default port: $SERVICE_PORT"
+# Port selection
+step "Port Configuration"
+echo "Enter port number or press Enter for default (2086):"
+read -p "Service port [$DEFAULT_PORT]: " SERVICE_PORT
+SERVICE_PORT=${SERVICE_PORT:-$DEFAULT_PORT}
+
+# Validate port
+if ! [[ "$SERVICE_PORT" =~ ^[0-9]+$ ]] || [ "$SERVICE_PORT" -lt 1 ] || [ "$SERVICE_PORT" -gt 65535 ]; then
+    error "Invalid port: $SERVICE_PORT. Must be between 1-65535"
+fi
+
+step "Using port: $SERVICE_PORT"
 
 step "Updating system and installing dependencies..."
 apt update && apt upgrade -y
@@ -54,7 +65,6 @@ wget -q "$DOWNLOAD_URL" -O v3p.zip
 if [ ! -f v3p.zip ]; then error "Failed to download v3p.zip"; fi
 
 step "Extracting package..."
-# Use -o to overwrite files without prompting
 unzip -o -q v3p.zip
 rm -f v3p.zip
 
@@ -125,6 +135,9 @@ echo "Installation Directory: $INSTALL_DIR"
 echo "Service Name: $SERVICE_NAME"
 echo ""
 echo "Access URL: http://$IP_ADDRESS:$SERVICE_PORT"
+echo ""
+echo "Note: v3 is a different service type than v4 and does not have"
+echo "a web admin panel with username/password authentication."
 echo ""
 echo "Useful Commands:"
 echo "Check status:    systemctl status $SERVICE_NAME"
